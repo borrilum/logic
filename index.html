@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Easy Logic Helper</title>
+  <style>
+    :root {
+      --bg: #f6f8ff;
+      --card: #ffffff;
+      --ink: #1f2a44;
+      --muted: #5c6784;
+      --accent: #3b5bdb;
+      --ok: #18794e;
+      --warn: #9a6700;
+      --bad: #b42318;
+      --border: #d8def3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.4;
+    }
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+    h1 { margin: .2rem 0 .6rem; }
+    .subtitle { color: var(--muted); margin-top: 0; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem;
+      box-shadow: 0 6px 18px rgba(33, 53, 110, 0.06);
+    }
+    textarea, input[type="text"] {
+      width: 100%;
+      border: 1px solid #bcc7ee;
+      border-radius: 10px;
+      padding: .6rem;
+      font-size: .95rem;
+      background: #fcfdff;
+      color: var(--ink);
+    }
+    textarea { min-height: 120px; resize: vertical; }
+    .small { font-size: .88rem; color: var(--muted); }
+    .btn {
+      margin-top: .6rem;
+      border: 0;
+      background: var(--accent);
+      color: white;
+      border-radius: 10px;
+      padding: .55rem .9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: .7rem;
+      border-radius: 10px;
+      padding: .7rem;
+      background: #eef2ff;
+      border: 1px solid #cfdbff;
+      white-space: pre-wrap;
+    }
+    .ok { color: var(--ok); font-weight: 700; }
+    .warn { color: var(--warn); font-weight: 700; }
+    .bad { color: var(--bad); font-weight: 700; }
+    details {
+      background: #fff;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: .7rem;
+      margin-top: .8rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: .5rem;
+      font-size: .85rem;
+    }
+    th, td {
+      border: 1px solid #d6def7;
+      padding: .28rem;
+      text-align: center;
+    }
+    th { background: #edf1ff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🧠 Easy Logic Helper</h1>
+    <p class="subtitle">A no-code mini app to check argument validity, rough soundness, and contradictions (Classical + simple First-Order Logic).</p>
+
+    <details open>
+      <summary><strong>ELI5: How to use this (super simple)</strong></summary>
+      <ol>
+        <li><strong>Classical Logic (left):</strong> Put premises line-by-line. Put conclusion. Click <em>Check</em>. If it says <strong>VALID</strong>, your conclusion follows from premises.</li>
+        <li><strong>Soundness:</strong> Tick the checkbox only if you think each premise is true in real life. Then if valid + checked, it says <strong>SOUND (based on your truth judgement)</strong>.</li>
+        <li><strong>Debate Contradiction Finder:</strong> Put your claims and opponent claims (one per line). It looks for direct opposites like <code>P</code> vs <code>!P</code>.</li>
+        <li><strong>First-Order Logic (right):</strong> Add statements like <code>forall x Human(x)</code>, <code>exists x !Human(x)</code>, <code>Mortal(Socrates)</code>, <code>!Mortal(Socrates)</code>. Click check to find simple contradictions.</li>
+        <li>If no contradiction appears, that means this tool did not find an <em>obvious</em> contradiction. (Not a full theorem prover.)</li>
+      </ol>
+      <p class="small">Allowed operators in classical formulas: <code>!</code> (not), <code>&</code> (and), <code>|</code> (or), <code>-></code> (if...then), <code><-></code> (iff), parentheses.</p>
+    </details>
+
+    <div class="grid">
+      <section class="card">
+        <h2>1) Classical Logic Argument Checker</h2>
+        <label>Premises (one per line)</label>
+        <textarea id="premises">P -> Q
+P</textarea>
+        <label>Conclusion</label>
+        <input id="conclusion" type="text" value="Q" />
+        <label style="display:flex;align-items:center;gap:.5rem;margin-top:.6rem;">
+          <input type="checkbox" id="premisesRealTrue" />
+          I believe all premises are true in real life
+        </label>
+        <button class="btn" id="runClassical">Check Classical Argument</button>
+        <div id="classicalResult" class="result"></div>
+        <div id="truthTable"></div>
+      </section>
+
+      <section class="card">
+        <h2>2) Debate Contradiction Finder (You vs Opponent)</h2>
+        <label>Your claims (one per line)</label>
+        <textarea id="myClaims">P
+R -> S</textarea>
+        <label>Opponent claims (one per line)</label>
+        <textarea id="oppClaims">!P
+R</textarea>
+        <button class="btn" id="runDebate">Find Direct Contradictions</button>
+        <div id="debateResult" class="result"></div>
+      </section>
+
+      <section class="card">
+        <h2>3) First-Order Logic (Simple Contradiction Check)</h2>
+        <label>Statements (one per line)</label>
+        <textarea id="folStatements">forall x Human(x)
+exists x !Human(x)
+Mortal(Socrates)
+!Mortal(Socrates)</textarea>
+        <button class="btn" id="runFol">Check FOL Contradictions</button>
+        <div id="folResult" class="result"></div>
+        <p class="small">Supported simple FOL shapes: <code>Predicate(a,b)</code>, <code>!Predicate(a)</code>, <code>forall x Predicate(x)</code>, <code>forall x !Predicate(x)</code>, <code>exists x Predicate(x)</code>, <code>exists x !Predicate(x)</code>.</p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Classical parser + evaluator ----------
+    function tokenize(input) {
+      const clean = input.replace(/\s+/g, '');
+      const regex = /<->|->|[()!&|]|[A-Za-z][A-Za-z0-9_]*/g;
+      const tokens = clean.match(regex) || [];
+      if (tokens.join('') !== clean) {
+        throw new Error('Invalid symbol in: ' + input);
+      }
+      return tokens;
+    }
+
+    function parseFormula(str) {
+      const tokens = tokenize(str);
+      let i = 0;
+
+      function peek() { return tokens[i]; }
+      function consume(expected) {
+        const t = tokens[i++];
+        if (expected && t !== expected) throw new Error(`Expected ${expected} but found ${t}`);
+        return t;
+      }
+
+      function parseIff() {
+        let left = parseImp();
+        while (peek() === '<->') {
+          consume('<->');
+          left = { type: 'iff', left, right: parseImp() };
+        }
+        return left;
+      }
+
+      function parseImp() {
+        let left = parseOr();
+        while (peek() === '->') {
+          consume('->');
+          left = { type: 'imp', left, right: parseOr() };
+        }
+        return left;
+      }
+
+      function parseOr() {
+        let left = parseAnd();
+        while (peek() === '|') {
+          consume('|');
+          left = { type: 'or', left, right: parseAnd() };
+        }
+        return left;
+      }
+
+      function parseAnd() {
+        let left = parseNot();
+        while (peek() === '&') {
+          consume('&');
+          left = { type: 'and', left, right: parseNot() };
+        }
+        return left;
+      }
+
+      function parseNot() {
+        if (peek() === '!') {
+          consume('!');
+          return { type: 'not', value: parseNot() };
+        }
+        return parseAtom();
+      }
+
+      function parseAtom() {
+        if (peek() === '(') {
+          consume('(');
+          const inside = parseIff();
+          consume(')');
+          return inside;
+        }
+        const t = peek();
+        if (!t || /[()!&|]|->|<->/.test(t)) {
+          throw new Error('Unexpected token near: ' + (t || 'end'));
+        }
+        consume();
+        return { type: 'var', name: t };
+      }
+
+      const ast = parseIff();
+      if (i !== tokens.length) throw new Error('Extra tokens in formula: ' + str);
+      return ast;
+    }
+
+    function evalAst(node, env) {
+      switch (node.type) {
+        case 'var': return !!env[node.name];
+        case 'not': return !evalAst(node.value, env);
+        case 'and': return evalAst(node.left, env) && evalAst(node.right, env);
+        case 'or': return evalAst(node.left, env) || evalAst(node.right, env);
+        case 'imp': return !evalAst(node.left, env) || evalAst(node.right, env);
+        case 'iff': return evalAst(node.left, env) === evalAst(node.right, env);
+        default: throw new Error('Unknown node type: ' + node.type);
+      }
+    }
+
+    function collectVars(node, set = new Set()) {
+      if (!node) return set;
+      if (node.type === 'var') set.add(node.name);
+      if (node.left) collectVars(node.left, set);
+      if (node.right) collectVars(node.right, set);
+      if (node.value) collectVars(node.value, set);
+      return set;
+    }
+
+    function assignments(vars) {
+      const rows = [];
+      const total = 2 ** vars.length;
+      for (let n = 0; n < total; n++) {
+        const env = {};
+        vars.forEach((v, idx) => {
+          env[v] = !!(n & (1 << (vars.length - 1 - idx)));
+        });
+        rows.push(env);
+      }
+      return rows;
+    }
+
+    function normalizeFormula(text) {
+      const ast = parseFormula(text);
+      function norm(node) {
+        if (node.type === 'var') return node.name;
+        if (node.type === 'not') return '!' + norm(node.value);
+        const op = {and:'&', or:'|', imp:'->', iff:'<->'}[node.type];
+        return '(' + norm(node.left) + op + norm(node.right) + ')';
+      }
+      return norm(ast);
+    }
+
+    document.getElementById('runClassical').addEventListener('click', () => {
+      const out = document.getElementById('classicalResult');
+      const tableWrap = document.getElementById('truthTable');
+      out.innerHTML = '';
+      tableWrap.innerHTML = '';
+      try {
+        const premises = document.getElementById('premises').value
+          .split('\n').map(s => s.trim()).filter(Boolean);
+        const conclusionText = document.getElementById('conclusion').value.trim();
+        if (!premises.length || !conclusionText) throw new Error('Please enter premises and conclusion.');
+
+        const premiseAsts = premises.map(parseFormula);
+        const conclusionAst = parseFormula(conclusionText);
+
+        const varSet = new Set();
+        premiseAsts.forEach(a => collectVars(a, varSet));
+        collectVars(conclusionAst, varSet);
+        const vars = [...varSet].sort();
+
+        const rows = assignments(vars);
+        let valid = true;
+        const counterExamples = [];
+
+        const rendered = rows.map(env => {
+          const premiseVals = premiseAsts.map(ast => evalAst(ast, env));
+          const allPremisesTrue = premiseVals.every(Boolean);
+          const concVal = evalAst(conclusionAst, env);
+          if (allPremisesTrue && !concVal) {
+            valid = false;
+            counterExamples.push(env);
+          }
+          return { env, premiseVals, allPremisesTrue, concVal };
+        });
+
+        const believesTrue = document.getElementById('premisesRealTrue').checked;
+        const validityText = valid
+          ? '<span class="ok">VALID ✅</span> (no case where premises are true and conclusion is false)'
+          : '<span class="bad">INVALID ❌</span> (counterexample found)';
+
+        let soundnessText = '<span class="warn">Soundness undecided</span> (app cannot check real-world truth automatically).';
+        if (valid && believesTrue) {
+          soundnessText = '<span class="ok">SOUND (based on your truth judgement) ✅</span>';
+        } else if (!valid) {
+          soundnessText = '<span class="bad">NOT sound</span> (invalid arguments cannot be sound).';
+        }
+
+        out.innerHTML = `${validityText}\n${soundnessText}`;
+
+        let html = '<details><summary><strong>Show truth table</strong></summary><table><tr>';
+        vars.forEach(v => html += `<th>${v}</th>`);
+        premises.forEach((p, idx) => html += `<th>Prem ${idx + 1}</th>`);
+        html += '<th>Conclusion</th><th>Counterexample?</th></tr>';
+        rendered.forEach(r => {
+          html += '<tr>';
+          vars.forEach(v => html += `<td>${r.env[v] ? 'T' : 'F'}</td>`);
+          r.premiseVals.forEach(v => html += `<td>${v ? 'T' : 'F'}</td>`);
+          html += `<td>${r.concVal ? 'T' : 'F'}</td>`;
+          html += `<td>${r.allPremisesTrue && !r.concVal ? 'YES' : ''}</td>`;
+          html += '</tr>';
+        });
+        html += '</table></details>';
+        tableWrap.innerHTML = html;
+      } catch (err) {
+        out.innerHTML = `<span class="bad">Error:</span> ${err.message}`;
+      }
+    });
+
+    document.getElementById('runDebate').addEventListener('click', () => {
+      const out = document.getElementById('debateResult');
+      out.innerHTML = '';
+      try {
+        const mine = document.getElementById('myClaims').value.split('\n').map(s => s.trim()).filter(Boolean);
+        const opp = document.getElementById('oppClaims').value.split('\n').map(s => s.trim()).filter(Boolean);
+
+        const mineNorm = mine.map(c => ({ raw: c, norm: normalizeFormula(c) }));
+        const oppNorm = opp.map(c => ({ raw: c, norm: normalizeFormula(c) }));
+
+        const contradictions = [];
+        for (const m of mineNorm) {
+          for (const o of oppNorm) {
+            if (m.norm === '!' + o.norm || o.norm === '!' + m.norm) {
+              contradictions.push(`You: ${m.raw}  ↔  Opponent: ${o.raw}`);
+            }
+          }
+        }
+
+        if (contradictions.length) {
+          out.innerHTML = `<span class="bad">Contradictions found:</span>\n- ${contradictions.join('\n- ')}`;
+        } else {
+          out.innerHTML = '<span class="ok">No direct contradictions found.</span>\n(There still may be indirect conflicts.)';
+        }
+      } catch (err) {
+        out.innerHTML = `<span class="bad">Error:</span> ${err.message}`;
+      }
+    });
+
+    // ---------- Simple FOL contradiction checker ----------
+    function parseFOLLine(line) {
+      const s = line.trim();
+      if (!s) return null;
+      const quant = s.match(/^(forall|exists)\s+([a-zA-Z][a-zA-Z0-9_]*)\s+(.+)$/i);
+      if (quant) {
+        const q = quant[1].toLowerCase();
+        const variable = quant[2];
+        const body = quant[3].trim();
+        const atom = parseFOLAtom(body);
+        return { kind: 'quant', q, variable, atom, raw: line };
+      }
+      const atom = parseFOLAtom(s);
+      return { kind: 'atom', atom, raw: line };
+    }
+
+    function parseFOLAtom(text) {
+      let s = text.trim();
+      let neg = false;
+      if (s.startsWith('!')) { neg = true; s = s.slice(1).trim(); }
+      const m = s.match(/^([A-Za-z][A-Za-z0-9_]*)\s*\(([^)]*)\)$/);
+      if (!m) throw new Error('Bad FOL atom: ' + text);
+      const pred = m[1];
+      const args = m[2].split(',').map(x => x.trim()).filter(Boolean);
+      return { pred, args, neg };
+    }
+
+    function atomKey(a) {
+      return `${a.pred}(${a.args.join(',')})`;
+    }
+
+    document.getElementById('runFol').addEventListener('click', () => {
+      const out = document.getElementById('folResult');
+      out.innerHTML = '';
+      try {
+        const lines = document.getElementById('folStatements').value
+          .split('\n').map(s => s.trim()).filter(Boolean);
+        const parsed = lines.map(parseFOLLine);
+        const issues = [];
+
+        // Direct atom contradictions: P(a) and !P(a)
+        const seen = new Map();
+        for (const st of parsed) {
+          if (st.kind !== 'atom') continue;
+          const key = atomKey(st.atom);
+          const opposite = key + '|' + (!st.atom.neg);
+          const mine = key + '|' + st.atom.neg;
+          if (seen.has(opposite)) {
+            issues.push(`Direct contradiction: ${seen.get(opposite)}  vs  ${st.raw}`);
+          }
+          seen.set(mine, st.raw);
+        }
+
+        // Quantifier contradictions: forall x P(x) vs exists x !P(x)
+        const foralls = [];
+        const exists = [];
+        for (const st of parsed) {
+          if (st.kind === 'quant') {
+            if (st.q === 'forall') foralls.push(st);
+            if (st.q === 'exists') exists.push(st);
+          }
+        }
+
+        for (const f of foralls) {
+          for (const e of exists) {
+            const samePred = f.atom.pred === e.atom.pred;
+            const sameArity = f.atom.args.length === e.atom.args.length;
+            const varPatternF = f.atom.args.every(a => a === f.variable);
+            const varPatternE = e.atom.args.every(a => a === e.variable);
+            if (samePred && sameArity && varPatternF && varPatternE && f.atom.neg !== e.atom.neg) {
+              issues.push(`Quantifier contradiction: ${f.raw}  vs  ${e.raw}`);
+            }
+          }
+        }
+
+        if (issues.length) {
+          out.innerHTML = `<span class="bad">Contradictions found:</span>\n- ${issues.join('\n- ')}`;
+        } else {
+          out.innerHTML = '<span class="ok">No simple FOL contradictions found.</span>\n(Complex contradictions may still exist.)';
+        }
+      } catch (err) {
+        out.innerHTML = `<span class="bad">Error:</span> ${err.message}`;
+      }
+    });
+
+    // Run once with defaults
+    document.getElementById('runClassical').click();
+    document.getElementById('runDebate').click();
+    document.getElementById('runFol').click();
+  </script>
+</body>
+</html>
